@@ -40,13 +40,16 @@ var top10Command = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		jres := top10{}
+		jRes := top10{}
 		data, _ := ioutil.ReadAll(res.Body)
-		json.Unmarshal(data, &jres)
+		err = json.Unmarshal(data, &jRes)
 
+		if err != nil {
+			log.Fatal(err)
+		}
 		prompt := promptui.Select{
 			Label: "Select Player",
-			Items: append(jres.Top10, "Exit"),
+			Items: append(jRes.Top10, "Exit"),
 		}
 
 		prompt.IsVimMode = true
@@ -65,9 +68,9 @@ var top10Command = &cobra.Command{
 		utils.CallClear()
 		fmt.Printf("You choose %q\n", result)
 		go utils.StartLoading(c)
-		parsed_name := utils.ParsePlayerName(result)
-		fmt.Println(parsed_name)
-		po := SearchPlayer(parsed_name)
+		parsedName := utils.ParsePlayerName(result)
+		fmt.Println(parsedName)
+		po := SearchPlayer(parsedName)
 		c <- true
 		utils.CallClear()
 
