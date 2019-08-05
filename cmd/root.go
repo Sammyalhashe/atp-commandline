@@ -15,10 +15,11 @@ var rootCmd = &cobra.Command{
                 Complete documentation is available at http://hugo.spf13.com`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Do Stuff Here
-        fmt.Println("asdf")
+		Menu()
 	},
 }
 
+// Execute execute rootCmd
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

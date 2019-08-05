@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/Sammyalhashe/gomod/utils"
 	"io/ioutil"
 	"net/http"
+	"regexp"
+
+	"github.com/Sammyalhashe/gomod/utils"
 	//"reflect"
 
 	"github.com/Sammyalhashe/gomod/constants"
@@ -28,35 +31,35 @@ type PlayerOverview struct {
 				Bio              string `json:"bio"`
 				CurrentYearStats struct {
 					DataSingles struct {
-						Rank       int   `json:"rank"`
-						RankMove   int   `json:"rank_move"`
-						WL         []int `json:"w-l"`
-						Titles     int   `json:"titles"`
-						PrizeMoney float64   `json:"prize_money"`
+						Rank       int     `json:"rank"`
+						RankMove   int     `json:"rank_move"`
+						WL         []int   `json:"w-l"`
+						Titles     int     `json:"titles"`
+						PrizeMoney float64 `json:"prize_money"`
 					} `json:"data-singles"`
 					DataDoubles struct {
-						Rank       int   `json:"rank"`
-						RankMove   int   `json:"rank_move"`
-						WL         []int `json:"w-l"`
-						Titles     int   `json:"titles"`
-						PrizeMoney float64   `json:"prize_money"`
+						Rank       int     `json:"rank"`
+						RankMove   int     `json:"rank_move"`
+						WL         []int   `json:"w-l"`
+						Titles     int     `json:"titles"`
+						PrizeMoney float64 `json:"prize_money"`
 					} `json:"data-doubles"`
 					Year string `json:"year"`
 				} `json:"current_year_stats"`
 				CareerStats struct {
 					DataSingles struct {
-						Rank        int    `json:"rank"`
-						DateHighest string `json:"date_highest"`
-						WL          []int  `json:"w-l"`
-						Titles      int    `json:"titles"`
-						PrizeMoney  float64    `json:"prize_money"`
+						Rank        int     `json:"rank"`
+						DateHighest string  `json:"date_highest"`
+						WL          []int   `json:"w-l"`
+						Titles      int     `json:"titles"`
+						PrizeMoney  float64 `json:"prize_money"`
 					} `json:"data-singles"`
 					DataDoubles struct {
-						Rank        int    `json:"rank"`
-						DateHighest string `json:"date_highest"`
-						WL          []int  `json:"w-l"`
-						Titles      int    `json:"titles"`
-						PrizeMoney  float64    `json:"prize_money"`
+						Rank        int     `json:"rank"`
+						DateHighest string  `json:"date_highest"`
+						WL          []int   `json:"w-l"`
+						Titles      int     `json:"titles"`
+						PrizeMoney  float64 `json:"prize_money"`
 					} `json:"data-doubles"`
 				} `json:"career_stats"`
 				Fundamentals struct {
@@ -70,8 +73,8 @@ type PlayerOverview struct {
 						Kg  float64 `json:"kg"`
 					} `json:"weight"`
 					Height struct {
-						Ft string `json:"ft"`
-						Cm float64    `json:"cm"`
+						Ft string  `json:"ft"`
+						Cm float64 `json:"cm"`
 					} `json:"height"`
 					Birthplace string   `json:"birthplace"`
 					Residence  string   `json:"residence"`
@@ -86,6 +89,21 @@ type PlayerOverview struct {
 	} `json:"player"`
 }
 
+func returnStringArr(arr []string) string {
+	var ret string
+
+	n := len(arr)
+
+	for idx, el := range arr {
+		ret += el
+
+		if idx != n-1 {
+			ret += ", "
+		}
+	}
+	return ret
+}
+
 // PrintPlayer Prints the player overview with a specific format
 func (p PlayerOverview) PrintPlayer() string {
 	player := p.Player[0].Stats.Player
@@ -98,15 +116,27 @@ func (p PlayerOverview) PrintPlayer() string {
 
 	var res string
 
+	fund := player.Fundamentals
+
 	res += "Player: " + player.Name + "\n"
-	res += "Bio " + player.Bio + "\n"
+	res += "Bio: " + player.Bio + "\n"
+	res += "Age: " + fmt.Sprintf("%v\n", fund.Age.Age)
+	res += "Birthdate: " + fmt.Sprintf("%v\n", fund.Age.Birthdate)
+	res += "TurnedPro: " + fmt.Sprintf("%v\n", fund.TurnedPro)
+	res += "Weight: " + fmt.Sprintf("%vkg/%vlbs\n", fund.Weight.Kg, fund.Weight.Lbs)
+	res += "Height: " + fmt.Sprintf("%vcm/%vft\n", fund.Height.Cm, fund.Height.Ft)
+	res += "Birthplace: " + fmt.Sprintf("%v\n", fund.Birthplace)
+	res += "Residence: " + fmt.Sprintf("%v\n", fund.Residence)
+	res += "Coach(es): " + fmt.Sprintf("%v\n", returnStringArr(fund.Coach))
+	res += "Plays:\n"
+	res += "\tHand: " + fmt.Sprintf("%s\n", fund.Plays.Hand)
+	res += "\tBackhand: " + fmt.Sprintf("%s\n", fund.Plays.Backhand)
 
 	currYear := player.CurrentYearStats
 	res += "This Year: " + currYear.Year + "\n"
 
 	res += "\tSingles:\n"
 	singles := currYear.DataSingles
-	fmt.Println(singles.Rank)
 	res += "\t\tRank: " + fmt.Sprintf("%d\n", singles.Rank)
 	res += "\t\tRankMove: " + fmt.Sprintf("%d\n", singles.RankMove)
 	res += "\t\tWin-Loss: " + fmt.Sprintf("%d - ", singles.WL[0]) + fmt.Sprintf("%d\n", singles.WL[1])
@@ -146,7 +176,7 @@ func (p PlayerOverview) PrintPlayer() string {
 
 // SearchPlayer creates an http request to atp-scraper for the player overview
 func SearchPlayer(name string) PlayerOverview {
-	res, err := http.Get(constants.APIHead + constants.PlayerOverview + name)
+	res, err := http.Get(constants.APIHead + constants.PlayerOverviewURL + name)
 
 	if err != nil {
 		log.Fatal(err)
@@ -165,41 +195,64 @@ func SearchPlayer(name string) PlayerOverview {
 	return jRes
 }
 
+// ValidName checks if a given name is valid
+func ValidName(name string) bool {
+	valid := regexp.MustCompile(constants.NameRegex)
+	return valid.MatchString(name)
+}
+
+// PlayerOverviewFunc searches for a player by name and prints his overview
+func PlayerOverviewFunc() {
+
+	validate := func(input string) error {
+		if !ValidName(input) {
+			return errors.New("Must be valid name")
+		}
+		return nil
+	}
+
+	// promptTemaplates := &promptui.PromptTemplates{
+	// 	Prompt:  "{{ . }}",
+	// 	Valid:   "{{ . | bold  }}",
+	// 	Invalid: "{{ . | red }}",
+	// 	Success: "{{ . | bold }}",
+	// }
+
+	prompt := promptui.Prompt{
+		Label: utils.FilterToColor("Enter Player Name", "green"),
+		// Templates: promptTemaplates,
+		Validate: validate,
+	}
+
+	utils.CallClear()
+	result, err := prompt.Run()
+
+	if err != nil {
+		fmt.Println("Prompt failed...")
+		log.Fatal(err)
+	}
+
+	utils.CallClear()
+	// fmt.Printf("You choose %q\n", result)
+
+	c := make(chan bool)
+	defer close(c)
+	go utils.StartLoading(c)
+	playerOverview := SearchPlayer(utils.ParsePlayerName(result))
+	c <- true
+	utils.CallClear()
+
+	pres := playerOverview.PrintPlayer()
+	fmt.Println("\n" + pres)
+	utils.WaitForEnter()
+	Menu()
+}
+
 var playerOverviewCommand = &cobra.Command{
 	Use:   "po",
 	Short: "Gets a player overview",
 	Long:  `Gets a player overview, which includes info such as player rank, earnings, coach, etc...`,
-	Run:   func(cmd *cobra.Command, args []string) {
-		validate := func(input string) error {
-			return nil
-		}
-
-		prompt := promptui.Prompt{
-			Label:    "Enter Player Name",
-			Validate: validate,
-		}
-
-		utils.CallClear()
-		result, err := prompt.Run()
-
-		if err != nil {
-			fmt.Println("Prompt failed...")
-			log.Fatal(err)
-		}
-
-		utils.CallClear()
-		fmt.Printf("You choose %q\n", result)
-
-		c := make(chan bool)
-		defer close(c)
-		go utils.StartLoading(c)
-		playerOverview := SearchPlayer(utils.ParsePlayerName(result))
-		c <- true
-		utils.CallClear()
-
-		pres := playerOverview.PrintPlayer()
-		fmt.Println("\n" + pres)
-
-
+	Run: func(cmd *cobra.Command, args []string) {
+		PlayerOverviewFunc()
 	},
 }
