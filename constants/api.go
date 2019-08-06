@@ -11,3 +11,6 @@ const Top10 string = "/top_10"
 
 // PlayerOverviewURL The url to append to base for a query for player overview
 const PlayerOverviewURL = "/player_overview/"
+
+// PlayerTitlesURL url endpoin for player titles
+const PlayerTitlesURL = "/titles"

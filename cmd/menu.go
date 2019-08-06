@@ -16,7 +16,7 @@ func init() {
 
 // Menu creates a menu to access various commands
 func Menu() {
-	values := [3]string{"Top 10", "Player Search", "Exit"}
+	values := []string{"Top 10", "Player Search",  "Player Titles", "Exit"}
 	fmt.Print(utils.CenterHor("asdf"))
 	// templates := &promptui.SelectTemplates{
 	// 	Help:     utils.CenterText("j(up) k(down)"),
@@ -26,26 +26,40 @@ func Menu() {
 	// 	Selected: utils.CenterText("-> {{. | cyan }}"),
 	// }
 	prompt := promptui.Select{
-		Label:     "Enter Option",
-		Items:     values[:],
+		Label: "Enter Option",
+		Items: values[:],
 		// Templates: templates,
 	}
 
 	utils.CallClear()
-	idx, _, err := prompt.Run()
+	_, res, err := prompt.Run()
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if idx == 0 {
+	switch res {
+	case "Top 10":
 		Top10()
-	} else if idx == 1 {
+	case "Player Search":
 		PlayerOverviewFunc()
-	} else {
+	case "Player Titles":
+		Titles()
+	default:
 		fmt.Println("Exiting...")
 		os.Exit(1)
 	}
+
+	// if idx == 0 {
+	// 	Top10()
+	// } else if idx == 1 {
+	// 	PlayerOverviewFunc()
+	// } else if idx == 2 {
+	// 	Titles()
+	// } else {
+	// 	fmt.Println("Exiting...")
+	// 	os.Exit(1)
+	// }
 }
 
 var menuCommand = &cobra.Command{
